@@ -1110,7 +1110,7 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # Start polling
 if __name__ == "__main__":
-    TOKEN = "..."  
+    TOKEN = "8225031857:AAFct1zz6W8OYPzhFuAZaq98oUMdm1GWKY8"  
     app = ApplicationBuilder().token(TOKEN).build()
 
     # 🔹 Priority commands
