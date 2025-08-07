@@ -124,29 +124,31 @@ fallback_user_ids = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat = update.effective_chat
-    sender_chat = update.effective_message.sender_chat if update.effective_message else None
+    message = update.effective_message
+    sender_chat = message.sender_chat if message else None
 
-    # ✅ اگر گروپ یا سپر گروپ ہے
+    print("🔰 START COMMAND TRIGGERED")
+    print(f"📣 Chat ID: {chat.id}")
+    print(f"📛 Chat Title: {chat.title}")
+    print(f"📎 Chat Type: {chat.type}")
+    print(f"👤 User ID: {user.id if user else 'None'}")
+    print(f"👤 User Name: {user.first_name if user else 'None'}")
+    print(f"🏷️ Sender Chat ID: {sender_chat.id if sender_chat else 'None'}")
+    print(f"🏷️ Sender Chat Title: {sender_chat.title if sender_chat else 'None'}")
+
+    # اگر گروپ یا سپر گروپ ہے
     if chat.type in ["group", "supergroup"]:
         user_id = user.id if user else None
 
-        # fallback اگر user.id نہیں ہے (مثلاً جب گروپ کا owner کرے)
+        # fallback اگر user.id نہ ہو، اور گروپ کی اپنی ID سے میسج ہو
         if not user_id and sender_chat and sender_chat.id == chat.id:
-            # ممکنہ طور پر گروپ کے own ID سے message آیا ہے
-            print("⚠️ Group owner triggered /start, using fallback_user_id logic.")
+            print("⚠️ Detected group-owned message. Using fallback_user_id.")
+            user_id = context.bot.id  # یا کوئی placeholder fallback
 
-            # تم کسی محفوظ جگہ سے fallback_user_id نکال سکتے ہو یا default دے سکتے ہو
-            user_id = fallback_user_ids.get(chat.id)
-
-        # fallback میں یہ id save کرو future use کے لیے
-        if user_id:
-            fallback_user_ids[chat.id] = user_id
-
-        # اب safe initialize
         initialize_group_settings(chat.id, chat.type, chat.title, user_id)
         return
 
-    # ✅ اگر پرائیویٹ چیٹ ہے
+    # اگر پرائیویٹ چیٹ ہے
     keyboard = [
         [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{context.bot.username}?startgroup=true")],
         [InlineKeyboardButton("👥 Your Groups", callback_data="your_groups")],
