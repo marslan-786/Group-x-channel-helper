@@ -945,7 +945,7 @@ async def back_to_settings_handler(update: Update, context: ContextTypes.DEFAULT
 
 # Main app runner
 if __name__ == "__main__":
-    TOKEN = "7735984673:AAGEhbsdIfO-j8B3DvBwBW9JSb9BcPd_J6o"  # Insert your bot token here
+    TOKEN = "8225031857:AAFct1zz6W8OYPzhFuAZaq98oUMdm1GWKY8"  # Insert your bot token here
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
