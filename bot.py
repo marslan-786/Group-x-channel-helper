@@ -1059,9 +1059,10 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("settings", settings_command))
     app.add_handler(CallbackQueryHandler(start, pattern="^force_start$"))
     app.add_handler(CommandHandler("set", set_timer))
-    app.add_handler(MessageHandler(filters.ALL, handle_all_messages))
     app.add_handler(CommandHandler("check", check_words))
     app.add_handler(CommandHandler('backup', send_backup))
+    app.add_handler(MessageHandler(filters.ALL, handle_all_messages))
+    
 
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(CallbackQueryHandler(back_to_settings_handler, pattern="^back_to_settings$"))
