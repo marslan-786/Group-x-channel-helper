@@ -908,9 +908,7 @@ async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_id = message.reply_to_message.from_user.id
     permissions = ChatPermissions(
         can_send_messages=True,
-        can_send_media_messages=True,
-        can_send_other_messages=True,
-        can_add_web_page_previews=True
+        can_send_media_messages=True
     )
     await context.bot.restrict_chat_member(chat_id, target_id, permissions=permissions)
     await message.reply_text("🔓 User has been unmuted.")
