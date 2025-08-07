@@ -898,19 +898,15 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     user_id = None
 
-    # Logging start
     print(f"⚙️ settings_command called in chat_id: {chat.id} | type: {chat.type}")
 
     try:
         if update.effective_user:
             user_id = update.effective_user.id
             print(f"👤 effective_user ID: {user_id}")
-        elif update.message and update.message.sender_chat and update.message.sender_chat.id == chat.id:
-            user_id = chat.id
-            print(f"📢 sender_chat via message, user_id set to: {user_id}")
-        elif update.edited_message and update.edited_message.sender_chat and update.edited_message.sender_chat.id == chat.id:
-            user_id = chat.id
-            print(f"✏️ sender_chat via edited_message, user_id set to: {user_id}")
+        elif update.message and update.message.sender_chat:
+            user_id = update.message.sender_chat.id
+            print(f"📢 sender_chat ID: {user_id}")
         else:
             print("❌ Could not determine user_id.")
     except Exception as e:
@@ -923,6 +919,13 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ This command only works in groups.")
         return
 
+    # 🛠️ Fix: If user_id equals chat.id, allow (means group itself sent it)
+    if user_id == chat.id:
+        print("✅ sender_chat is the group itself, allow access to settings.")
+        await show_group_settings(update, chat.id)
+        return
+
+    # Else: check normally
     is_admin_result = await is_admin(chat.id, user_id, context)
     print(f"🔍 is_admin check result: {is_admin_result}")
 
