@@ -89,6 +89,7 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
             "allowed_domains": set(),
             "chat_type": chat_type
         }
+
     if chat_id not in action_settings:
         action_settings[chat_id] = {
             "links": {"action": "off", "duration": "1h", "warn": True, "delete": True, "enabled": False},
@@ -100,11 +101,15 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
                 "duration": "1h", "messages": []
             }
         }
+
     if chat_id not in admin_list:
         admin_list[chat_id] = []
+
     if chat_id not in user_warnings:
         user_warnings[chat_id] = {}
-    if user_id is not None:
+
+    # ✅ Allow group to self-manage
+    if user_id is not None and user_id != chat_id:
         user_chats.setdefault(user_id, {}).setdefault("groups", set()).add(chat_id)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -917,13 +922,16 @@ async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.restrict_chat_member(chat.id, target_id, permissions=permissions)
     await message.reply_text("🔓 User has been unmuted with limited permissions (messages, photos, documents).")
 
+user_warnings = {}
+
 async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
+    chat_id = chat.id  # ✅ یہ لائن missing تھی
     message = update.message or update.edited_message
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
+    # اگر چیٹ خود (group/channel) نے بھیجا ہے، تو allow کریں
     if sender_chat and sender_chat.id == chat.id:
         is_allowed = True
     elif user:
@@ -938,7 +946,9 @@ async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await message.reply_text("⛔ You must reply to a user's message to use this command.")
 
     target = message.reply_to_message.from_user.id
-    user_warnings.setdefault(chat_id, {})
+
+    # Warning count increase
+    user_warnings.setdefault(chat_id, {})  # اگر group کا warning dict نہیں بنا، تو بنا دو
     user_warnings[chat_id][target] = user_warnings[chat_id].get(target, 0) + 1
 
     await message.reply_text(
@@ -1065,8 +1075,8 @@ async def check_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"🚫 Custom Words Set:\n\n- {word_list}")
     
-# ✅ یہ صرف چینل پوسٹس کو filter کرے گا
 async def handle_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # اگر چینل پوسٹ ہو
     if update.channel_post:
         await handle_channel_post(update, context)
 
@@ -1098,10 +1108,12 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         print(f"❌ Failed to delete message {message.message_id}: {e}")
 
 
+# Start polling
 if __name__ == "__main__":
-    TOKEN = "8225031857:AAFct1zz6W8OYPzhFuAZaq98oUMdm1GWKY8"  
+    TOKEN = "..."  
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # 🔹 Priority commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", show_help))
     app.add_handler(CommandHandler("ban", ban_user))
@@ -1114,14 +1126,17 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("set", set_timer))
     app.add_handler(CommandHandler("check", check_words))
     app.add_handler(CommandHandler('backup', send_backup))
-    app.add_handler(MessageHandler(filters.ALL, handle_all_messages))
-    
 
+    # 🔹 First priority: message filters
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, custom_message_input_handler), group=9)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_filter_handler), group=10)
+
+    # 🔹 Buttons
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(CallbackQueryHandler(back_to_settings_handler, pattern="^back_to_settings$"))
 
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, custom_message_input_handler), group=9)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_filter_handler), group=10)
+    # 🔹 Lowest priority: catch-all handler (last!)
+    app.add_handler(MessageHandler(filters.ALL, handle_all_messages), group=20)
 
     print("🤖 Bot is running...")
     app.run_polling()
