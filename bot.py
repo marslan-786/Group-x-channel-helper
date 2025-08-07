@@ -108,14 +108,11 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
     if chat_id not in user_warnings:
         user_warnings[chat_id] = {}
 
-    # ✅ سب سے اہم حصہ
-    # اگر user_id ہے (یعنی start command میں user آیا ہو) تو use کر لو
-    # ورنہ fallback id use کرو (جسے تم query یا command میں بھیج رہے ہو)
-
+    # ✅ اہم حصہ: گروپ کو یوزر کے "Your Groups" میں add کرنا
     fallback_user_id = fallback_user_ids.get(chat_id) if 'fallback_user_ids' in globals() else None
     target_user_id = user_id or fallback_user_id
 
-    if target_user_id and target_user_id != chat_id:
+    if target_user_id:
         user_chats.setdefault(target_user_id, {}).setdefault("groups", set()).add(chat_id)
 
 # globally یہ dictionary رکھو تاکہ fallback user IDs کو یاد رکھا جا سکے
