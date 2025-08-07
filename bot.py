@@ -960,6 +960,9 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("⚠️ Usage: /set_timer <channel_username> <time>\nExample: /set_timer @mychannel 1h")
 
+channel_timers = {}  # key: "@channelusername", value: timer in seconds
+action_settings = {}  # key: chat_id, value: dict of settings
+
 import os
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -996,6 +999,11 @@ async def check_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     word_list = "\n- ".join(words)
 
     await update.message.reply_text(f"🚫 Custom Words Set:\n\n- {word_list}")
+    
+# ✅ یہ صرف چینل پوسٹس کو filter کرے گا
+async def handle_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.channel_post:
+        await handle_channel_post(update, context)
 
 # ✅ Channel Post Handler
 # ✅ Channel Post Handler (Updated)
@@ -1039,7 +1047,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("settings", settings_command))
     app.add_handler(CallbackQueryHandler(start, pattern="^force_start$"))
     app.add_handler(CommandHandler("set", set_timer))
-    app.add_handler(MessageHandler(filters.ChannelPost.ALL, handle_channel_post))
+    app.add_handler(MessageHandler(filters.ALL, handle_all_messages))
     app.add_handler(CommandHandler("check", check_words))
     app.add_handler(CommandHandler('backup', send_backup))
 
