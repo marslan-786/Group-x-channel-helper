@@ -98,16 +98,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
 
     if chat.type in ["group", "supergroup"]:
-        # Get the user who added the bot (for groups)
+        # خاص کیس: جب بٹ کو گروپ میں ایڈ کیا جاتا ہے
         if update.message and update.message.new_chat_members:
             if context.bot.id in [u.id for u in update.message.new_chat_members]:
-                added_by = update.message.from_user.id
-                initialize_group_settings(chat.id, chat.type, chat.title, added_by)
+                added_by = update.message.from_user
+                initialize_group_settings(chat.id, chat.type, chat.title, added_by.id)
+                
+                # اونر/ایڈمن کو ایڈمن لسٹ میں شامل کریں
+                if added_by.id not in admin_list.get(chat.id, []):
+                    admin_list.setdefault(chat.id, []).append(added_by.id)
+                
+                welcome_msg = (
+                    f"👋 Thanks for adding me to this group, {added_by.mention_html()}!\n\n"
+                    "🔧 Use /settings to configure me.\n"
+                    "🛡️ I'll help manage links, forwards, and mentions."
+                )
+                await update.message.reply_html(welcome_msg)
                 return
-        
-        # Fallback for when bot is added silently or via other means
+
+        # عام کیس: جب گروپ میں /start کیا جاتا ہے
         initialize_group_settings(chat.id, chat.type, chat.title, user.id)
         return
+
+    # باقی سٹارٹ فنکشن اسی طرح رہے گی...
 
     # Rest of the start function remains the same...
 
@@ -136,6 +149,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.reply_html(message_text, reply_markup=reply_markup)
 
         await update.callback_query.answer()
+
+async def is_owner_or_admin(chat_id: int, user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+        return member.status in ["administrator", "creator"]
+    except Exception as e:
+        logger.error(f"Admin/Owner check error: {e}")
+        return False
 
 # /help
 async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -386,22 +407,14 @@ async def message_filter_handler(update: Update, context: ContextTypes.DEFAULT_T
     message = update.effective_message
     chat_id = message.chat_id
 
-    # ✅ صرف group یا supergroup میں کام کرے
     if message.chat.type not in ["group", "supergroup"]:
         return
 
-    # ✅ اگر گروپ settings ہی نہیں یا bot کا اپنا میسج ہے، تو چھوڑ دو
     if chat_id not in group_settings or message.from_user.id == context.bot.id:
         return
 
-    # ✅ اگر message چینل سے آیا ہے (linked channel), تو skip کر دو
-    if message.sender_chat:
-        return
-
-    user_id = message.from_user.id
-
-    # ✅ اگر بھیجنے والا admin ہے، تو فلٹر نہ لگاؤ
-    if await is_admin(chat_id, user_id, context):
+    # اونر/ایڈمن کو چھوڑ دیں
+    if await is_owner_or_admin(chat_id, message.from_user.id, context):
         return
 
     text = message.text or message.caption or ""
@@ -554,9 +567,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     
     if chat.type in ["group", "supergroup"]:
-        member = await chat.get_member(uid)
-        if member.status not in ["administrator", "creator"]:
-            return await q.answer("❌ Only admins can use this.", show_alert=True)
+        if not await is_owner_or_admin(chat.id, uid, context):
+            return await q.answer("❌ Only admins or owner can use this.", show_alert=True)
+    
+    # باقی بٹن ہینڈلر کوڈ...
     
     # Rest of the button handler remains the same...
     
@@ -817,13 +831,16 @@ async def is_admin(chat_id: int, user_id: int, context: ContextTypes.DEFAULT_TYP
         return False
 
 # ✅ Ban command
+# مثال کے طور پر ban_user فنکشن میں
 async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     chat_id = message.chat_id
     user_id = message.from_user.id
 
-    if not await is_admin(chat_id, user_id, context):
-        return await message.reply_text("❌ Only admins can use this command.")
+    if not await is_owner_or_admin(chat_id, user_id, context):
+        return await message.reply_text("❌ Only admins or owner can use this command.")
+    
+    # باقی کوڈ...
 
     if not message.reply_to_message:
         return await message.reply_text("⛔ You must reply to a user's message to use this command.")
@@ -841,8 +858,8 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = message.chat_id
     user_id = message.from_user.id
 
-    if not await is_admin(chat_id, user_id, context):
-        return await message.reply_text("❌ Only admins can use this command.")
+    if not await is_owner_or_admin(chat_id, user_id, context):
+        return await message.reply_text("❌ Only admins or owner can use this command.")
 
     if not message.reply_to_message:
         return await message.reply_text("⛔ You must reply to a user's message to use this command.")
@@ -861,8 +878,8 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = message.chat_id
     user_id = message.from_user.id
 
-    if not await is_admin(chat_id, user_id, context):
-        return await message.reply_text("❌ Only admins can use this command.")
+    if not await is_owner_or_admin(chat_id, user_id, context):
+        return await message.reply_text("❌ Only admins or owner can use this command.")
 
     if not message.reply_to_message:
         return await message.reply_text("⛔ You must reply to a user's message to use this command.")
@@ -877,8 +894,8 @@ async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = message.chat_id
     user_id = message.from_user.id
 
-    if not await is_admin(chat_id, user_id, context):
-        return await message.reply_text("❌ Only admins can use this command.")
+    if not await is_owner_or_admin(chat_id, user_id, context):
+        return await message.reply_text("❌ Only admins or owner can use this command.")
 
     if not message.reply_to_message:
         return await message.reply_text("⛔ You must reply to a user's message to use this command.")
