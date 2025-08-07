@@ -126,7 +126,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     sender_chat = update.message.sender_chat if update.message else None
 
-    print("\n🔰 START COMMAND TRIGGERED\n")
+    print("🔰 START COMMAND TRIGGERED\n")
     print(f"📣 Chat ID: {chat.id}")
     print(f"📛 Chat Title: {chat.title}")
     print(f"📎 Chat Type: {chat.type}")
@@ -135,15 +135,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"🏷️ Sender Chat ID: {sender_chat.id if sender_chat else 'None'}")
     print(f"🏷️ Sender Chat Title: {sender_chat.title if sender_chat else 'None'}")
 
+    # ✅ CASE: If command is from group/supergroup
     if chat.type in ["group", "supergroup"]:
-        # اگر اونر ہے اور sender_chat بھی موجود ہے تو اس سے group initialize کرو
-        if sender_chat and sender_chat.id == chat.id:
-            initialize_group_settings(chat.id, chat.type, chat.title, None)
-        else:
-            initialize_group_settings(chat.id, chat.type, chat.title, user.id)
+        initialize_group_settings(chat.id, chat.type, chat.title, user.id)
+
+        # Send confirmation message to the group
+        await update.message.reply_html(
+            f"✅ <b>{chat.title}</b> has been successfully activated!\n"
+            "I'm now managing this group."
+        )
         return
 
-    # پرائیویٹ چیٹ میں بوٹ استعمال کرنے پر UI بٹن
+    # ✅ CASE: If command is from private chat
     keyboard = [
         [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{context.bot.username}?startgroup=true")],
         [InlineKeyboardButton("👥 Your Groups", callback_data="your_groups")],
