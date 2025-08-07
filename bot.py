@@ -792,6 +792,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text("❌ Something went wrong, please try again.")
         
 async def is_admin(chat_id: int, user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    # Allow if sender is same as the group/channel itself (e.g., via @channelusername)
+    if user_id == chat_id:
+        return True
+
     try:
         member = await context.bot.get_chat_member(chat_id, user_id)
         return member.status in ["administrator", "creator"]
