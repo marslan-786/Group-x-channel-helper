@@ -968,18 +968,22 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 async def send_backup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    print("🚨 send_backup called")  # ✅ debug line
     try:
         chat_id = update.effective_chat.id
         message = update.effective_message
 
+        print(f"📥 Chat ID: {chat_id}, Message ID: {message.message_id}")  # ✅ debug line
         await message.reply_text("📦 Sending backup files...")
 
-        file_path = "bot.py"  # یا جس فائل کا بیک اپ لینا ہو
+        file_path = "bot.py"
 
         if os.path.exists(file_path):
+            print("📁 File found, sending...")  # ✅ debug line
             with open(file_path, "rb") as f:
                 await context.bot.send_document(chat_id, document=f)
         else:
+            print("❌ File not found!")  # ✅ debug line
             await message.reply_text("❌ bot.py file not found.")
     except Exception as e:
         print(f"❌ Error in send_backup: {e}")
@@ -989,14 +993,22 @@ async def send_backup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             pass
 
 async def check_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🚨 check_words called")  # ✅ debug line
     chat_id = update.effective_chat.id
 
-    if chat_id not in action_settings or not action_settings[chat_id]["custom"]["messages"]:
+    if chat_id not in action_settings:
+        print("ℹ️ Chat ID not in action_settings")  # ✅ debug line
+        await update.message.reply_text("✅ No custom words set for this chat.")
+        return
+
+    if not action_settings[chat_id]["custom"]["messages"]:
+        print("ℹ️ No custom messages set")  # ✅ debug line
         await update.message.reply_text("✅ No custom words set for this chat.")
         return
 
     words = action_settings[chat_id]["custom"]["messages"]
     word_list = "\n- ".join(words)
+    print(f"📄 Word list: {word_list}")  # ✅ debug line
 
     await update.message.reply_text(f"🚫 Custom Words Set:\n\n- {word_list}")
     
