@@ -806,13 +806,14 @@ async def is_admin(chat_id: int, user_id: int, context: ContextTypes.DEFAULT_TYP
     except:
         return False
 
+from datetime import datetime, timezone
+
 async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     message = update.message or update.edited_message
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
     if sender_chat and sender_chat.id == chat.id:
         is_allowed = True
     elif user:
@@ -828,9 +829,9 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     target_id = message.reply_to_message.from_user.id
     duration = parse_duration(" ".join(context.args) if context.args else "1h")
-    until_date = datetime.utcnow() + duration
+    until_date = datetime.now(timezone.utc) + duration
 
-    await context.bot.ban_chat_member(chat_id, target_id, until_date=until_date)
+    await context.bot.ban_chat_member(chat.id, target_id, until_date=until_date)
     await message.reply_text(f"🚫 User has been banned for {format_duration(duration)}.")
 
 async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -867,7 +868,6 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
     if sender_chat and sender_chat.id == chat.id:
         is_allowed = True
     elif user:
@@ -882,7 +882,7 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await message.reply_text("⛔ You must reply to a user's message to use this command.")
 
     target_id = message.reply_to_message.from_user.id
-    await context.bot.unban_chat_member(chat_id, target_id)
+    await context.bot.unban_chat_member(chat.id, target_id)
     await message.reply_text("✅ User has been unbanned.")
 
 from telegram import ChatPermissions
