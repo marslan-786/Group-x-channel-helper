@@ -812,7 +812,15 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    if not await is_admin(chat_id, user_id, context):
+    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
+    if sender_chat and sender_chat.id == chat.id:
+        is_allowed = True
+    elif user:
+        is_allowed = await is_admin(chat.id, user.id, context)
+    else:
+        is_allowed = False
+
+    if not is_allowed:
         return await message.reply_text("❌ Only admins can use this command.")
 
     if not message.reply_to_message:
@@ -831,7 +839,15 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    if not await is_admin(chat_id, user_id, context):
+    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
+    if sender_chat and sender_chat.id == chat.id:
+        is_allowed = True
+    elif user:
+        is_allowed = await is_admin(chat.id, user.id, context)
+    else:
+        is_allowed = False
+
+    if not is_allowed:
         return await message.reply_text("❌ Only admins can use this command.")
 
     if not message.reply_to_message:
@@ -842,7 +858,7 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     until_date = datetime.utcnow() + duration
 
     permissions = ChatPermissions(can_send_messages=False)
-    await context.bot.restrict_chat_member(chat_id, target_id, permissions=permissions, until_date=until_date)
+    await context.bot.restrict_chat_member(chat.id, target_id, permissions=permissions, until_date=until_date)
     await message.reply_text(f"🔇 User has been muted for {format_duration(duration)}.")
 
 async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -851,7 +867,15 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    if not await is_admin(chat_id, user_id, context):
+    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
+    if sender_chat and sender_chat.id == chat.id:
+        is_allowed = True
+    elif user:
+        is_allowed = await is_admin(chat.id, user.id, context)
+    else:
+        is_allowed = False
+
+    if not is_allowed:
         return await message.reply_text("❌ Only admins can use this command.")
 
     if not message.reply_to_message:
@@ -867,7 +891,15 @@ async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
-    if not await is_admin(chat_id, user_id, context):
+    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
+    if sender_chat and sender_chat.id == chat.id:
+        is_allowed = True
+    elif user:
+        is_allowed = await is_admin(chat.id, user.id, context)
+    else:
+        is_allowed = False
+
+    if not is_allowed:
         return await message.reply_text("❌ Only admins can use this command.")
 
     if not message.reply_to_message:
@@ -889,9 +921,19 @@ async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_chat = message.sender_chat if message else None
     user = update.effective_user
 
+    # اگر چیٹ خود (group/ch) نے بھیجا ہے، تو allow کریں
+    if sender_chat and sender_chat.id == chat.id:
+        is_allowed = True
+    elif user:
+        is_allowed = await is_admin(chat.id, user.id, context)
+    else:
+        is_allowed = False
+
+    if not is_allowed:
+        return await message.reply_text("❌ Only admins can use this command.")
+
     if not message.reply_to_message:
-        await message.reply_text("⛔ You must reply to a message to warn someone.")
-        return
+        return await message.reply_text("⛔ You must reply to a user's message to use this command.")
 
     target = message.reply_to_message.from_user.id
     user_warnings.setdefault(chat_id, {})
