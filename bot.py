@@ -204,6 +204,29 @@ async def show_user_groups(query):
 
     kb.append([InlineKeyboardButton("🏠 Main Menu", callback_data="force_start")])
     await query.edit_message_text("📊 Your Groups:", reply_markup=InlineKeyboardMarkup(kb))
+    
+from telegram import ChatMemberUpdated
+from telegram.ext import ChatMemberHandler
+
+async def my_chat_member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member_update: ChatMemberUpdated = update.my_chat_member
+    chat = member_update.chat
+    new_status = member_update.new_chat_member.status
+
+    # صرف جب بوٹ ایڈ ہو
+    if new_status in ["administrator", "member"]:
+        user_id = member_update.from_user.id  # ایڈ کرنے والے کی ID
+        title = chat.title
+        chat_id = chat.id
+
+        initialize_group_settings(chat_id, chat_type=chat.type, title=title, user_id=user_id)
+        print(f"✅ Bot added to group {title} ({chat_id}) by user {user_id}")
+
+        # تم چاہو تو یہاں گروپ میں ایک ویلکم میسج بھی بھیج سکتے ہو
+        try:
+            await context.bot.send_message(chat_id, "🤖 Bot successfully added and initialized.")
+        except Exception as e:
+            print(f"❌ Could not send message to group: {e}")
 
 async def show_group_settings(update_or_query: Union[Update, CallbackQuery], gid: int):
     initialize_group_settings(gid)
