@@ -936,6 +936,18 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("⚠️ Usage: /set_timer <channel_username> <time>\nExample: /set_timer @mychannel 1h")
 
+async def send_backup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        await update.message.reply_text("📦 Sending backup files...")
+
+        if os.path.exists("bot.py"):
+            await context.bot.send_document(update.effective_chat.id, document=open("bot.py", "rb"))
+        else:
+            await update.message.reply_text("❌ bot.py file not found.")
+
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Error while sending files: {e}")
+
 async def check_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
@@ -981,9 +993,10 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("unmute", unmute_user))
     app.add_handler(CommandHandler("settings", settings_command))
     app.add_handler(CallbackQueryHandler(start, pattern="^force_start$"))
-    app.add_handler(CommandHandler("set_timer", set_timer))
+    app.add_handler(CommandHandler("set", set_timer))
     app.add_handler(MessageHandler(filters.ALL, handle_channel_post))
-    app.add_handler(CommandHandler("check_words", check_words))
+    app.add_handler(CommandHandler("check", check_words))
+    app.add_handler(CommandHandler('backup', send_backup))
 
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(CallbackQueryHandler(back_to_settings_handler, pattern="^back_to_settings$"))
