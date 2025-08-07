@@ -896,13 +896,18 @@ async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
-    user = update.effective_user
+    user_id = None
+
+    if update.effective_user:
+        user_id = update.effective_user.id
+    elif update.message.sender_chat and update.message.sender_chat.id == chat.id:
+        user_id = chat.id  # Allow if command sent via channel/group itself
 
     if chat.type not in ["group", "supergroup"]:
         await update.message.reply_text("⚠️ This command only works in groups.")
         return
 
-    if not await is_admin(chat.id, user.id, context):
+    if not await is_admin(chat.id, user_id, context):
         await update.message.reply_text("❌ This command requires admin privileges.")
         return
 
