@@ -362,9 +362,9 @@ async def show_custom_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
-    else:
         buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
+    else:
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
 
     await query.edit_message_text(
         text="📝 *Custom Message Settings*",
@@ -373,8 +373,10 @@ async def show_custom_settings(query, gid):
     )
     
 async def message_filter_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.effective_message
-    chat_id = message.chat_id
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if message.chat.type not in ["group", "supergroup"]:
         return
@@ -507,8 +509,10 @@ async def apply_action(filter_type: str, chat_id: int, user_id: int, message, co
 
 
 async def custom_message_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    text = update.message.text.strip()
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if user_id not in user_state:
         return
@@ -803,9 +807,10 @@ async def is_admin(chat_id: int, user_id: int, context: ContextTypes.DEFAULT_TYP
         return False
 
 async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    chat_id = message.chat_id
-    user_id = message.from_user.id
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if not await is_admin(chat_id, user_id, context):
         return await message.reply_text("❌ Only admins can use this command.")
@@ -821,9 +826,10 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text(f"🚫 User has been banned for {format_duration(duration)}.")
 
 async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    chat_id = message.chat_id
-    user_id = message.from_user.id
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if not await is_admin(chat_id, user_id, context):
         return await message.reply_text("❌ Only admins can use this command.")
@@ -840,9 +846,10 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text(f"🔇 User has been muted for {format_duration(duration)}.")
 
 async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    chat_id = message.chat_id
-    user_id = message.from_user.id
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if not await is_admin(chat_id, user_id, context):
         return await message.reply_text("❌ Only admins can use this command.")
@@ -855,9 +862,10 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text("✅ User has been unbanned.")
 
 async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    chat_id = message.chat_id
-    user_id = message.from_user.id
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if not await is_admin(chat_id, user_id, context):
         return await message.reply_text("❌ Only admins can use this command.")
@@ -876,9 +884,10 @@ async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text("🔓 User has been unmuted.")
 
 async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    chat_id = message.chat_id
-    from_user = message.from_user
+    chat = update.effective_chat
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     if not message.reply_to_message:
         await message.reply_text("⛔ You must reply to a message to warn someone.")
