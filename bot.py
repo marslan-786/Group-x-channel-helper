@@ -275,7 +275,7 @@ async def show_forward_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
+        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="settings_command")])
     else:
         buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="force_start")])
 
@@ -316,9 +316,9 @@ async def show_mention_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
     else:
-        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="force_start")])
+        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
 
     await query.edit_message_text(
         text="👥 *Mention Settings*",
@@ -362,9 +362,9 @@ async def show_custom_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
     else:
-        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="force_start")])
+        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
 
     await query.edit_message_text(
         text="📝 *Custom Message Settings*",
@@ -960,17 +960,30 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("⚠️ Usage: /set_timer <channel_username> <time>\nExample: /set_timer @mychannel 1h")
 
+import os
+from telegram import Update
+from telegram.ext import ContextTypes
+
 async def send_backup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        await update.message.reply_text("📦 Sending backup files...")
+        chat_id = update.effective_chat.id
+        message = update.effective_message
 
-        if os.path.exists("bot.py"):
-            await context.bot.send_document(update.effective_chat.id, document=open("bot.py", "rb"))
+        await message.reply_text("📦 Sending backup files...")
+
+        file_path = "bot.py"  # یا جس فائل کا بیک اپ لینا ہو
+
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                await context.bot.send_document(chat_id, document=f)
         else:
-            await update.message.reply_text("❌ bot.py file not found.")
-
+            await message.reply_text("❌ bot.py file not found.")
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Error while sending files: {e}")
+        print(f"❌ Error in send_backup: {e}")
+        try:
+            await update.effective_message.reply_text(f"⚠️ Error while sending files: {e}")
+        except:
+            pass
 
 async def check_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -985,6 +998,7 @@ async def check_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🚫 Custom Words Set:\n\n- {word_list}")
 
 # ✅ Channel Post Handler
+# ✅ Channel Post Handler (Updated)
 async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
     chat_id = message.chat_id
@@ -994,12 +1008,19 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         print(f"⚠️ No username for chat_id {chat_id}, skipping")
         return
 
-    timer = channel_timers.get(f"@{chat_username}", 60)  # default 60 sec
+    key = f"@{chat_username}"
+    
+    # ❌ اگر اس چینل کے لیے timer سیٹ نہیں کیا گیا، تو کچھ نہ کرو
+    if key not in channel_timers:
+        print(f"⏩ No timer set for {key}, skipping message delete.")
+        return
+
+    timer = channel_timers[key]
 
     await asyncio.sleep(timer)
     try:
         await context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
-        print(f"🗑️ Deleted message {message.message_id} from @{chat_username} after {timer}s")
+        print(f"🗑️ Deleted message {message.message_id} from {key} after {timer}s")
     except Exception as e:
         print(f"❌ Failed to delete message {message.message_id}: {e}")
 
@@ -1018,7 +1039,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("settings", settings_command))
     app.add_handler(CallbackQueryHandler(start, pattern="^force_start$"))
     app.add_handler(CommandHandler("set", set_timer))
-    app.add_handler(MessageHandler(filters.ALL, handle_channel_post))
+    app.add_handler(MessageHandler(filters.ChannelPost.ALL, handle_channel_post))
     app.add_handler(CommandHandler("check", check_words))
     app.add_handler(CommandHandler('backup', send_backup))
 
