@@ -533,18 +533,39 @@ async def custom_message_input_handler(update: Update, context: ContextTypes.DEF
     await start(update, context)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    data = q.data
-    uid = q.from_user.id
-    chat = q.message.chat   
-    await q.answer()
-    
-    if chat.type in ["group", "supergroup"]:
-        member = await chat.get_member(uid)
-        if member.status not in ["administrator", "creator"]:
-            return await q.answer("❌ Only Admin Use This۔", show_alert=True)
-    
-    
+    query = update.callback_query
+    message = query.message
+    user = query.from_user
+    sender_chat = message.sender_chat
+    chat = message.chat
+
+    print(f"🔘 button_handler in chat_id: {chat.id}")
+
+    # ✅ اگر group/channel نے خود بٹن دبایا ہو (rare but possible)
+    if sender_chat and sender_chat.id == chat.id:
+        print("✅ Callback sent by group/channel itself — allowing action.")
+        await handle_callback_action(update, context)
+        return
+
+    # ✅ ورنہ user کے ذریعے آیا ہے — تو admin چیک کرو
+    if user:
+        user_id = user.id
+        print(f"👤 Callback sent by user ID: {user_id}")
+        is_admin_result = await is_admin(chat.id, user_id, context)
+        print(f"🔍 is_admin check result: {is_admin_result}")
+
+        if is_admin_result:
+            print("✅ Admin verified — allowing button action.")
+            await handle_callback_action(update, context)
+            return
+        else:
+            print("🚫 User is not admin — denying access.")
+            await query.answer("❌ Only admins can perform this action.", show_alert=True)
+            return
+
+    # ❌ کچھ بھی نہ ہو پایا
+    print("❌ Could not verify sender — denying access.")
+    await query.answer("❌ Unable to verify who sent this action.", show_alert=True)
 
     try:      
         if data in ["force_start", "back_to_settings"]:
