@@ -124,9 +124,10 @@ fallback_user_ids = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat = update.effective_chat
-    sender_chat = update.message.sender_chat if update.message else None
+    message = update.message
+    sender_chat = message.sender_chat if message else None
 
-    print("🔰 START COMMAND TRIGGERED\n")
+    print("🔰 START COMMAND TRIGGERED")
     print(f"📣 Chat ID: {chat.id}")
     print(f"📛 Chat Title: {chat.title}")
     print(f"📎 Chat Type: {chat.type}")
@@ -135,18 +136,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"🏷️ Sender Chat ID: {sender_chat.id if sender_chat else 'None'}")
     print(f"🏷️ Sender Chat Title: {sender_chat.title if sender_chat else 'None'}")
 
-    # ✅ CASE: If command is from group/supergroup
     if chat.type in ["group", "supergroup"]:
-        initialize_group_settings(chat.id, chat.type, chat.title, user.id)
+        if not sender_chat:
+            print("⚠️ Group sent message directly. Possible group owner (creator) sent it.")
+        elif sender_chat.id != chat.id:
+            print("⚠️ Sender chat ID does not match group ID. Possibly forwarded or not group message.")
+        else:
+            print("✅ Valid group message, proceeding to initialize settings.")
 
-        # Send confirmation message to the group
-        await update.message.reply_html(
-            f"✅ <b>{chat.title}</b> has been successfully activated!\n"
-            "I'm now managing this group."
-        )
+        try:
+            initialize_group_settings(chat.id, chat.type, chat.title, user.id)
+            print("✅ Group successfully initialized.")
+            await message.reply_html(
+                f"✅ <b>{chat.title}</b> has been successfully activated!\nI'm now managing this group."
+            )
+        except Exception as e:
+            print(f"❌ Failed to initialize group settings: {e}")
+            await message.reply_text("❌ Failed to activate bot in this group. Check logs for more info.")
         return
 
-    # ✅ CASE: If command is from private chat
+    # Private Chat Handler
     keyboard = [
         [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{context.bot.username}?startgroup=true")],
         [InlineKeyboardButton("👥 Your Groups", callback_data="your_groups")],
@@ -158,9 +167,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "I'm your group management bot. Use the buttons below to begin!"
     )
 
-    if update.message:
-        await update.message.reply_html(message_text, reply_markup=reply_markup)
-
+    if message:
+        await message.reply_html(message_text, reply_markup=reply_markup)
     elif update.callback_query:
         try:
             await update.callback_query.message.edit_text(
