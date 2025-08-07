@@ -896,46 +896,37 @@ async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
-    user_id = None
+    message = update.message or update.edited_message
+    sender_chat = message.sender_chat if message else None
+    user = update.effective_user
 
     print(f"⚙️ settings_command called in chat_id: {chat.id} | type: {chat.type}")
 
-    try:
-        if update.effective_user:
-            user_id = update.effective_user.id
-            print(f"👤 effective_user ID: {user_id}")
-        elif update.message and update.message.sender_chat:
-            user_id = update.message.sender_chat.id
-            print(f"📢 sender_chat ID: {user_id}")
-        else:
-            print("❌ Could not determine user_id.")
-    except Exception as e:
-        print(f"❗ Exception while determining user_id: {e}")
-        await update.message.reply_text("⚠️ Unexpected error occurred during settings. Please check logs.")
-        return
-
-    if chat.type not in ["group", "supergroup"]:
-        print("⚠️ settings command used in non-group chat.")
-        await update.message.reply_text("⚠️ This command only works in groups.")
-        return
-
-    # 🛠️ Fix: If user_id equals chat.id, allow (means group itself sent it)
-    if user_id == chat.id:
-        print("✅ sender_chat is the group itself, allow access to settings.")
+    # ✅ CASE 1: If sender_chat exists and is same as chat (means group itself sent the command)
+    if sender_chat and sender_chat.id == chat.id:
+        print("✅ Command sent by group/channel itself — allowing access.")
         await show_group_settings(update, chat.id)
         return
 
-    # Else: check normally
-    is_admin_result = await is_admin(chat.id, user_id, context)
-    print(f"🔍 is_admin check result: {is_admin_result}")
+    # ✅ CASE 2: If user is a real user, check if they are admin
+    if user:
+        user_id = user.id
+        print(f"👤 Command sent by user ID: {user_id}")
+        is_admin_result = await is_admin(chat.id, user_id, context)
+        print(f"🔍 is_admin check result: {is_admin_result}")
 
-    if not is_admin_result:
-        print(f"🚫 User ID {user_id} is not admin in chat {chat.id}")
-        await update.message.reply_text("❌ This command requires admin privileges.")
-        return
+        if is_admin_result:
+            print("✅ Admin verified — allowing access.")
+            await show_group_settings(update, chat.id)
+            return
+        else:
+            print("🚫 User is not admin — access denied.")
+            await message.reply_text("❌ This command requires admin privileges.")
+            return
 
-    print("✅ Admin verified, opening settings...")
-    await show_group_settings(update, chat.id)
+    # ❌ If neither sender_chat nor user matched
+    print("❌ Could not verify sender — access denied.")
+    await message.reply_text("❌ Unable to verify sender identity.")
     
 async def back_to_settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
