@@ -898,19 +898,40 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     user_id = None
 
-    if update.effective_user:
-        user_id = update.effective_user.id
-    elif update.message.sender_chat and update.message.sender_chat.id == chat.id:
-        user_id = chat.id  # Allow if command sent via channel/group itself
+    # Logging start
+    print(f"⚙️ settings_command called in chat_id: {chat.id} | type: {chat.type}")
+
+    try:
+        if update.effective_user:
+            user_id = update.effective_user.id
+            print(f"👤 effective_user ID: {user_id}")
+        elif update.message and update.message.sender_chat and update.message.sender_chat.id == chat.id:
+            user_id = chat.id
+            print(f"📢 sender_chat via message, user_id set to: {user_id}")
+        elif update.edited_message and update.edited_message.sender_chat and update.edited_message.sender_chat.id == chat.id:
+            user_id = chat.id
+            print(f"✏️ sender_chat via edited_message, user_id set to: {user_id}")
+        else:
+            print("❌ Could not determine user_id.")
+    except Exception as e:
+        print(f"❗ Exception while determining user_id: {e}")
+        await update.message.reply_text("⚠️ Unexpected error occurred during settings. Please check logs.")
+        return
 
     if chat.type not in ["group", "supergroup"]:
+        print("⚠️ settings command used in non-group chat.")
         await update.message.reply_text("⚠️ This command only works in groups.")
         return
 
-    if not await is_admin(chat.id, user_id, context):
+    is_admin_result = await is_admin(chat.id, user_id, context)
+    print(f"🔍 is_admin check result: {is_admin_result}")
+
+    if not is_admin_result:
+        print(f"🚫 User ID {user_id} is not admin in chat {chat.id}")
         await update.message.reply_text("❌ This command requires admin privileges.")
         return
 
+    print("✅ Admin verified, opening settings...")
     await show_group_settings(update, chat.id)
     
 async def back_to_settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
