@@ -239,7 +239,7 @@ async def show_link_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="back_to_settings")])
     else:
         buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="force_start")])
 
@@ -280,7 +280,7 @@ async def show_forward_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="settings_command")])
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
     else:
         buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="force_start")])
 
@@ -323,7 +323,7 @@ async def show_mention_settings(query, gid):
     if chat_type in ["group", "supergroup"]:
         buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
     else:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="back_to_settings")])
 
     await query.edit_message_text(
         text="👥 *Mention Settings*",
@@ -367,9 +367,9 @@ async def show_custom_settings(query, gid):
 
     chat_type = query.message.chat.type
     if chat_type in ["group", "supergroup"]:
-        buttons.append([InlineKeyboardButton("🗑️ Remove", callback_data="back_to_settings")])
-    else:
         buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="settings_command")])
+    else:
+        buttons.append([InlineKeyboardButton("📋 Main Menu", callback_data="force_start")])
 
     await query.edit_message_text(
         text="📝 *Custom Message Settings*",
