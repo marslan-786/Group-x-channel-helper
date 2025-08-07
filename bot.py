@@ -87,8 +87,7 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
             "block_forwards": False,
             "block_mentions": False,
             "allowed_domains": set(),
-            "chat_type": chat_type,
-            "added_by": user_id  # ✅ یہ نئی لائن ایڈ کی گئی ہے
+            "chat_type": chat_type
         }
 
     if chat_id not in action_settings:
@@ -109,18 +108,45 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
     if chat_id not in user_warnings:
         user_warnings[chat_id] = {}
 
-    # ✅ یوزر کے ساتھ گروپ کی mapping
-    if user_id is not None and user_id != chat_id:
-        user_chats.setdefault(user_id, {}).setdefault("groups", set()).add(chat_id)
+    # ✅ سب سے اہم حصہ
+    # اگر user_id ہے (یعنی start command میں user آیا ہو) تو use کر لو
+    # ورنہ fallback id use کرو (جسے تم query یا command میں بھیج رہے ہو)
+
+    fallback_user_id = fallback_user_ids.get(chat_id) if 'fallback_user_ids' in globals() else None
+    target_user_id = user_id or fallback_user_id
+
+    if target_user_id and target_user_id != chat_id:
+        user_chats.setdefault(target_user_id, {}).setdefault("groups", set()).add(chat_id)
+
+# globally یہ dictionary رکھو تاکہ fallback user IDs کو یاد رکھا جا سکے
+fallback_user_ids = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat = update.effective_chat
+    sender_chat = update.effective_message.sender_chat if update.effective_message else None
 
+    # ✅ اگر گروپ یا سپر گروپ ہے
     if chat.type in ["group", "supergroup"]:
-        initialize_group_settings(chat.id, chat.type, chat.title, user.id)
+        user_id = user.id if user else None
+
+        # fallback اگر user.id نہیں ہے (مثلاً جب گروپ کا owner کرے)
+        if not user_id and sender_chat and sender_chat.id == chat.id:
+            # ممکنہ طور پر گروپ کے own ID سے message آیا ہے
+            print("⚠️ Group owner triggered /start, using fallback_user_id logic.")
+
+            # تم کسی محفوظ جگہ سے fallback_user_id نکال سکتے ہو یا default دے سکتے ہو
+            user_id = fallback_user_ids.get(chat.id)
+
+        # fallback میں یہ id save کرو future use کے لیے
+        if user_id:
+            fallback_user_ids[chat.id] = user_id
+
+        # اب safe initialize
+        initialize_group_settings(chat.id, chat.type, chat.title, user_id)
         return
 
+    # ✅ اگر پرائیویٹ چیٹ ہے
     keyboard = [
         [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{context.bot.username}?startgroup=true")],
         [InlineKeyboardButton("👥 Your Groups", callback_data="your_groups")],
