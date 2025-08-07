@@ -87,7 +87,8 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
             "block_forwards": False,
             "block_mentions": False,
             "allowed_domains": set(),
-            "chat_type": chat_type
+            "chat_type": chat_type,
+            "added_by": user_id  # ✅ یہ نئی لائن ایڈ کی گئی ہے
         }
 
     if chat_id not in action_settings:
@@ -108,7 +109,7 @@ def initialize_group_settings(chat_id: int, chat_type: str = "group", title: str
     if chat_id not in user_warnings:
         user_warnings[chat_id] = {}
 
-    # ✅ Allow group to self-manage
+    # ✅ یوزر کے ساتھ گروپ کی mapping
     if user_id is not None and user_id != chat_id:
         user_chats.setdefault(user_id, {}).setdefault("groups", set()).add(chat_id)
 
@@ -145,6 +146,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.reply_html(message_text, reply_markup=reply_markup)
 
         await update.callback_query.answer()
+        
+from telegram import ChatMemberUpdated
+from telegram.ext import ChatMemberHandler
+
+async def bot_added_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    member: ChatMemberUpdated = update.my_chat_member
+
+    if member.new_chat_member.status in ["administrator", "member"]:
+        # یہ گروپ میں add ہوا یا ایڈمن بنا
+        initialize_group_settings(chat.id, chat.type, chat.title, member.from_user.id)
 
 async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = """
@@ -165,9 +177,20 @@ Examples:
 
 async def show_user_groups(query):
     user_id = query.from_user.id
-    groups = user_chats.get(user_id, {}).get("groups", set())
 
-    if not groups:
+    # گروپس جو mapping میں موجود ہیں
+    mapped_groups = user_chats.get(user_id, {}).get("groups", set())
+
+    # وہ گروپس جو user نے add کیے ہوں (initialize میں added_by کے ذریعے)
+    added_by_user_groups = {
+        gid for gid, data in group_settings.items()
+        if data.get("added_by") == user_id
+    }
+
+    # دونوں کو ملا دو
+    all_groups = mapped_groups.union(added_by_user_groups)
+
+    if not all_groups:
         await query.edit_message_text(
             "😕 You haven't added this bot to any group yet.\n\n"
             "🔄 Please add the bot to your group and then use /start in that group."
@@ -175,7 +198,7 @@ async def show_user_groups(query):
         return
 
     kb = []
-    for gid in groups:
+    for gid in sorted(all_groups):
         title = group_settings.get(gid, {}).get("title", f"Group {gid}")
         kb.append([InlineKeyboardButton(f"📛 {title}", callback_data=f"group_{gid}")])
 
@@ -1130,6 +1153,7 @@ if __name__ == "__main__":
     # 🔹 First priority: message filters
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, custom_message_input_handler), group=9)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_filter_handler), group=10)
+    app.add_handler(ChatMemberHandler(bot_added_to_group, chat_member_types=["my_chat_member"]))
 
     # 🔹 Buttons
     app.add_handler(CallbackQueryHandler(button_handler))
