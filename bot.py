@@ -345,6 +345,15 @@ async def handle_claim_process(message, user_id, valid_phones, claim_type):
                 status_text = resp.get("status", "❌ کوئی اسٹیٹس موصول نہیں ہوا")
                 await safe_reply(message, f"[{phone}] ریکویسٹ {i}: {status_text}")
 
+                # 🔴 OTP verification check
+                if "otp verificaiton nhe keya" in status_text.lower():
+                    await safe_reply(
+                        message,
+                        f"[{phone}] ❌ پہلے OTP ویریفائی کریں!",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔑 Login", callback_data="login")]])
+                    )
+                    return  # پورا لوپ اور پراسیس ختم
+
                 # Success submit
                 if "your request has been successfully received" in status_text.lower():
                     blocked_numbers.add(phone)
@@ -366,12 +375,12 @@ async def handle_claim_process(message, user_id, valid_phones, claim_type):
             else:
                 await safe_reply(message, f"[{phone}] ریکویسٹ {i}: ❌ API ایرر: {resp}")
 
-            await asyncio.sleep(0.5)  # کم wait تاکہ تیزی سے چلے
+            await asyncio.sleep(0.5)
 
         if not valid_phones:
             break
 
-        await asyncio.sleep(1)  # ہر round کے بعد تھوڑا wait
+        await asyncio.sleep(1)
 
     if not package_activated_any:
         await safe_reply(message, "Thanks for using my bot")
@@ -452,6 +461,20 @@ async def claim_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     task.add_done_callback(lambda _: active_claim_tasks.pop(user_id, None))
     await update.message.reply_text("⏳ آپ کا 100GB کلیم پراسیس شروع ہو گیا ہے، رزلٹ آتے ہی آپ کو بتایا جائے گا۔")
 
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global requests_enabled, blocked_numbers, activated_numbers, active_claim_tasks, request_count
+
+    status_text = (
+        f"📊 **Bot Status**\n"
+        f"🔹 API Requests: {'✅ On' if requests_enabled else '⛔ Off'}\n"
+        f"🔹 Request Count: {request_count}\n"
+        f"🔹 Blocked Numbers: {len(blocked_numbers)}\n"
+        f"🔹 Activated Numbers: {len(activated_numbers)}\n"
+        f"🔹 Active Claim Tasks: {len(active_claim_tasks)}"
+    )
+
+    await update.message.reply_text(status_text, parse_mode="Markdown")
+
 # --------- MAIN ----------
 if __name__ == "__main__":
     app = ApplicationBuilder().token("8269427274:AAHq6-SiCvJQbaekVIUlvJLrJhaQ6swhQzA") \
@@ -467,6 +490,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("login", login_command))
     app.add_handler(CommandHandler("claim", claim_command))
     app.add_handler(CommandHandler("del", del_command))
+    app.add_handler(CommandHandler("status", status_command))
     
     print("Bot is running...")
     app.run_polling()
