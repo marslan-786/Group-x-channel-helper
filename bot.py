@@ -345,14 +345,15 @@ async def handle_claim_process(message, user_id, valid_phones, claim_type):
                 status_text = resp.get("status", "❌ کوئی اسٹیٹس موصول نہیں ہوا")
                 await safe_reply(message, f"[{phone}] ریکویسٹ {i}: {status_text}")
 
-                # 🔴 OTP verification check
-                if "otp verificaiton nhe keya" in status_text.lower():
+                # ---------- OTP Verificaiton Check (all spellings & lower-case) ----------
+                if "otp verific" in status_text.lower() and "nhe keya" in status_text.lower():
                     await safe_reply(
                         message,
                         f"[{phone}] ❌ پہلے OTP ویریفائی کریں!",
                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔑 Login", callback_data="login")]])
                     )
-                    return  # پورا لوپ اور پراسیس ختم
+                    user_states[user_id] = {"stage": "awaiting_phone_for_login"}  # optionally reset state
+                    return  # پورا فنکشن ختم! (تمام لوپس رک جائیں گے)
 
                 # Success submit
                 if "your request has been successfully received" in status_text.lower():
