@@ -57,7 +57,7 @@ async def repeat_login_api(user_id, phone, message):
             await safe_reply(message, "🛑 آپ کا پراسیس روک دیا گیا ہے۔")
             user_cancel_flags[user_id] = False
             break
-        data = await fetch_json(f"https://data-api.impossible-world.xyz/api/logins?num={phone}")
+        data = await fetch_json(f"https://data-api.impossible-world.xyz/api/log?num={phone}")
         msg = (data.get("message") or "").lower()
         # OTP successfully generated
         if "otp successfully generated" in msg:
@@ -83,7 +83,7 @@ async def repeat_otp_api(user_id, phone, otp, message):
             await safe_reply(message, "🛑 آپ کا پراسیس روک دیا گیا ہے۔")
             user_cancel_flags[user_id] = False
             break
-        data = await fetch_json(f"https://data-api.impossible-world.xyz/api/logins?num={phone}&otp={otp}")
+        data = await fetch_json(f"https://data-api.impossible-world.xyz/api/log?num={phone}&otp={otp}")
         msg = (data.get("message") or "").lower()
         # ... آگے وہی کوڈ ...
         # Success: OTP verified
@@ -271,7 +271,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         async def otp_worker():
             while True:
-                data = await fetch_json(f"https://data-api.impossible-world.xyz/api/logins?num={phone}&otp={otp}")
+                data = await fetch_json(f"https://data-api.impossible-world.xyz/api/log?num={phone}&otp={otp}")
                 msg = (data.get("message") or "").lower()
                 # Success: OTP verified
                 if "verified" in msg or "success" in msg:
@@ -346,9 +346,9 @@ async def handle_claim_process(message, user_id, valid_phones, claim_type):
                 return
 
             url = (
-                f"https://data-api.impossible-world.xyz/api/actives?number={phone}"
+                f"https://data-api.impossible-world.xyz/api/act?number={phone}"
                 if claim_type == "5gb"
-                else f"https://data-api.impossible-world.xyz/api/activates?number={phone}"
+                else f"https://data-api.impossible-world.xyz/api/acti?number={phone}"
             )
 
             resp = await fetch_json(url)
